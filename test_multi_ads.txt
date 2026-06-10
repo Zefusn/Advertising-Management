@@ -1,0 +1,18 @@
+2024-01-15 10:30:15 D/AdSDK: 发起广告请求 40101 adSlotId=banner_001 requestId=req_001
+2024-01-15 10:30:16 D/AdSDK: 广告填充成功 40201 adSlotId=banner_001 requestId=req_001
+2024-01-15 10:30:17 D/AdSDK: 广告展示 40301 adSlotId=banner_001 requestId=req_001
+2024-01-15 10:30:18 D/AdSDK: 价值上报 40303 adSlotId=banner_001 requestId=req_001 revenue=0.05
+2024-01-15 10:30:20 D/AdSDK: 广告关闭 40402 adSlotId=banner_001 requestId=req_001
+
+2024-01-15 10:31:15 D/AdSDK: 发起广告请求 40101 adSlotId=banner_002 requestId=req_002
+2024-01-15 10:31:16 D/AdSDK: 广告填充成功 40201 adSlotId=banner_002 requestId=req_002
+2024-01-15 10:31:17 D/AdSDK: 广告展示 40301 adSlotId=banner_002 requestId=req_002
+
+2024-01-15 10:32:15 D/AdSDK: 发起广告请求 40101 adSlotId=banner_003 requestId=req_003
+2024-01-15 10:32:16 D/AdSDK: 广告填充失败 40202 adSlotId=banner_003 requestId=req_003
+
+2024-01-15 10:33:15 D/AdSDK: 发起广告请求 40101 adSlotId=interstitial_001 requestId=req_004
+2024-01-15 10:33:16 D/AdSDK: 广告填充成功 40201 adSlotId=interstitial_001 requestId=req_004
+2024-01-15 10:33:17 D/AdSDK: 广告展示 40301 adSlotId=interstitial_001 requestId=req_004
+2024-01-15 10:33:18 D/AdSDK: 价值上报 40303 adSlotId=interstitial_001 requestId=req_004 revenue=0.10
+2024-01-15 10:33:20 D/AdSDK: 广告关闭 40402 adSlotId=interstitial_001 requestId=req_004

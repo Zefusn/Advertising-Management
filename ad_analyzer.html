@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>广告打点流程分析工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: #0a0a14;
+            min-height: 100vh;
+            padding: 20px;
+            color: #e0e0e0;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 26px;
+            color: #00d2ff;
+        }
+        .input-section {
+            background: #12121e;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #1e1e3a;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 12px;
+            background: #0a0a14;
+            border: 1px solid #1e1e3a;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 12px;
+            font-family: 'Consolas', monospace;
+            resize: vertical;
+        }
+        textarea:focus { outline: none; border-color: #00d2ff; }
+        .btn-group { margin-top: 12px; display: flex; gap: 10px; }
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #00d2ff; color: #000; font-weight: bold; }
+        .btn-primary:hover { background: #00b8e6; }
+        .btn-danger { background: #ff4757; color: #fff; }
+
+        .analysis-result {
+            background: #12121e;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #1e1e3a;
+        }
+        .phase-card {
+            background: #0a0a14;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #1e1e3a;
+            overflow: hidden;
+        }
+        .phase-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .phase-header:hover { background: rgba(255,255,255,0.03); }
+        .phase-title { font-size: 16px; font-weight: bold; color: #fff; }
+        .phase-subtitle { font-size: 12px; color: #888; margin-top: 4px; }
+        .phase-status {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .status-complete { background: rgba(46,213,115,0.15); color: #2ed573; border: 1px solid rgba(46,213,115,0.3); }
+        .status-incomplete { background: rgba(255,165,2,0.15); color: #ffa502; border: 1px solid rgba(255,165,2,0.3); }
+
+        .phase-flow {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #1e1e3a;
+            background: rgba(0,0,0,0.2);
+        }
+        .step-badge {
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .step-found { background: rgba(46,213,115,0.2); color: #2ed573; }
+        .step-missed { background: rgba(255,71,87,0.2); color: #ff4757; }
+        .step-arrow { color: #444; font-size: 16px; }
+
+        .phase-events { display: none; padding: 15px 20px; }
+        .phase-events.active { display: block; }
+        .event-item {
+            display: flex;
+            gap: 15px;
+            padding: 10px 0;
+            border-bottom: 1px solid #1a1a2e;
+            align-items: flex-start;
+        }
+        .event-item:last-child { border-bottom: none; }
+        .event-time {
+            font-family: monospace;
+            font-size: 11px;
+            color: #666;
+            min-width: 130px;
+        }
+        .event-code {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 75px;
+            text-align: center;
+        }
+        .code-40300 { background: rgba(168,85,247,0.2); color: #a855f7; }
+        .code-40301 { background: rgba(255,165,2,0.2); color: #ffa502; }
+        .code-40303 { background: rgba(255,71,87,0.2); color: #ff6b81; }
+        .code-40401 { background: rgba(255,71,87,0.15); color: #ff8a9e; }
+        .code-40402 { background: rgba(255,71,87,0.1); color: #ff4757; }
+        .code-40101 { background: rgba(30,144,255,0.2); color: #1e90ff; }
+        .code-40111 { background: rgba(30,144,255,0.15); color: #5ba8ff; }
+        .code-40201 { background: rgba(46,213,115,0.2); color: #2ed573; }
+        .code-40501 { background: rgba(255,165,2,0.15); color: #ffa502; }
+        .code-100503 { background: rgba(168,85,247,0.15); color: #c084fc; }
+        .code-100505 { background: rgba(168,85,247,0.1); color: #a78bfa; }
+        .code-other { background: rgba(255,255,255,0.1); color: #888; }
+
+        .event-desc { flex: 1; font-size: 13px; }
+        .event-desc .desc-main { color: #e0e0e0; }
+        .event-desc .desc-detail { color: #888; font-size: 11px; margin-top: 3px; }
+        .event-raw {
+            font-family: monospace;
+            font-size: 10px;
+            color: #555;
+            max-width: 450px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .event-raw:hover { color: #888; }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #12121e;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #1e1e3a;
+        }
+        .stat-value { font-size: 32px; font-weight: bold; }
+        .stat-label { font-size: 12px; color: #888; margin-top: 5px; }
+        .stat-total .stat-value { color: #00d2ff; }
+        .stat-complete .stat-value { color: #2ed573; }
+        .stat-incomplete .stat-value { color: #ffa502; }
+        .stat-rate .stat-value { color: #a855f7; }
+
+        .toggle-icon { transition: transform 0.2s; font-size: 18px; color: #888; }
+        .toggle-icon.open { transform: rotate(180deg); }
+        .empty-state { text-align: center; padding: 80px 20px; color: #555; }
+        .empty-state .icon { font-size: 50px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 广告打点流程分析工具</h1>
+        <div class="input-section">
+            <textarea id="logInput" placeholder="粘贴 EventLog 日志内容..."></textarea>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="analyzeLog()">🔍 分析日志</button>
+                <button class="btn btn-danger" onclick="clearAll()">🗑️ 清空</button>
+            </div>
+        </div>
+        <div id="resultArea" style="display: none;">
+            <div class="stats-row" id="statsRow"></div>
+            <div class="analysis-result" id="analysisResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const SCENES = {
+            '101': { name: '开屏广告', adType: '5', icon: '🚀' },
+            '301': { name: '语言页面底部原生广告', adType: '2', icon: '📱' },
+            '302': { name: '新手引导原生广告', adType: '2', icon: '🎯' },
+            '303': { name: '设置页面原生广告', adType: '2', icon: '⚙️' }
+        };
+
+        const EVENTS = {
+            '900073': { name: '冷启动APP', desc: '点击桌面图标冷启动APP，触发开屏动画' },
+            'loadSplashAd': { name: '预加载开屏', desc: '开始预加载开屏广告' },
+            '40300': { name: '进入场景', desc: '进入广告场景页面' },
+            '100505': { name: '触发场景', desc: '触发场景广告逻辑' },
+            '100503': { name: '调用展示', desc: '代码调用广告show展示方法' },
+            '40301': { name: '广告展示', desc: '广告成功渲染显示在屏幕' },
+            '40303': { name: '价值上报', desc: '上报本次广告预估收益，同步三方统计' },
+            '40401': { name: '广告点击', desc: '用户点击广告' },
+            '40402': { name: '广告关闭', desc: '用户关闭广告' },
+            '40501': { name: '冷却策略', desc: '触发误点击冷却策略，限制重复弹出' },
+            '40101': { name: '预加载请求', desc: '发起下一条广告预加载' },
+            '40111': { name: '请求结果', desc: '广告请求结果返回' },
+            '40201': { name: '填充成功', desc: '广告素材加载成功，预估收益' }
+        };
+
+        const CORE_EVENTS = ['40301', '40303'];
+
+        let phases = [];
+
+        function parseLogLine(line) {
+            const timeMatch = line.match(/(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+)/);
+            const timestamp = timeMatch ? timeMatch[1] : '';
+
+            if (line.includes('loadSplashAd start true')) {
+                return { timestamp, code: 'loadSplashAd', scene: '', adType: '', params: {}, raw: line.trim() };
+            }
+
+            const jsonMatch = line.match(/\{.*\}/);
+            if (!jsonMatch) return null;
+
+            try {
+                const data = JSON.parse(jsonMatch[0]);
+                const eventId = data.event_id;
+                if (!eventId) return null;
+
+                let params = {};
+                if (data.params) {
+                    try { params = JSON.parse(data.params); } catch (e) {}
+                }
+
+                return {
+                    timestamp,
+                    code: eventId,
+                    unitId: data.unit_id || '',
+                    adType: data.ad_type || '',
+                    adPlatform: data.ad_platform || '',
+                    scene: params.scene || '',
+                    params,
+                    raw: line.trim(),
+                    data
+                };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function analyzeLog() {
+            const input = document.getElementById('logInput').value;
+            if (!input.trim()) {
+                alert('请先粘贴日志内容');
+                return;
+            }
+
+            const allEvents = [];
+            const lines = input.split('\n');
+            
+            lines.forEach(line => {
+                const event = parseLogLine(line);
+                if (event && EVENTS[event.code]) {
+                    allEvents.push(event);
+                }
+            });
+
+            if (allEvents.length === 0) {
+                alert('未找到有效事件，请检查日志格式');
+                return;
+            }
+
+            phases = analyzePhases(allEvents);
+            document.getElementById('resultArea').style.display = 'block';
+            renderStats();
+            renderPhases();
+        }
+
+        function analyzePhases(events) {
+            const phases = [];
+            let currentPhase = null;
+
+            for (let i = 0; i < events.length; i++) {
+                const event = events[i];
+                
+                // 检测场景开始：40300 有 scene 参数
+                if (event.code === '40300' && event.scene) {
+                    if (currentPhase) {
+                        phases.push(currentPhase);
+                    }
+                    
+                    const sceneInfo = SCENES[event.scene] || { name: `场景${event.scene}`, adType: event.adType || '2', icon: '📍' };
+                    
+                    currentPhase = {
+                        scene: event.scene,
+                        name: sceneInfo.name,
+                        adType: event.adType || sceneInfo.adType,
+                        icon: sceneInfo.icon,
+                        events: [event],
+                        startTime: event.timestamp
+                    };
+                } 
+                // 检测阶段结束：40402 关闭
+                else if (event.code === '40402' && currentPhase) {
+                    currentPhase.events.push(event);
+                    phases.push(currentPhase);
+                    currentPhase = null;
+                }
+                // 其他事件添加到当前阶段
+                else if (currentPhase) {
+                    currentPhase.events.push(event);
+                }
+                // 没有当前阶段时，40301/40303 需要根据 scene 或 ad_type 创建新阶段
+                else if (['40301', '40303'].includes(event.code)) {
+                    const scene = event.scene || 'unknown';
+                    const sceneInfo = SCENES[scene] || { name: `场景${scene}`, adType: event.adType || '2', icon: '📍' };
+                    
+                    currentPhase = {
+                        scene: scene,
+                        name: sceneInfo.name,
+                        adType: event.adType || sceneInfo.adType,
+                        icon: sceneInfo.icon,
+                        events: [event],
+                        startTime: event.timestamp
+                    };
+                }
+            }
+            
+            if (currentPhase) {
+                phases.push(currentPhase);
+            }
+
+            return phases;
+        }
+
+        function getPhaseStatus(phase) {
+            const hasCore = CORE_EVENTS.every(code => phase.events.some(e => e.code === code));
+            return hasCore ? 'complete' : 'incomplete';
+        }
+
+        function renderStats() {
+            const total = phases.length;
+            const complete = phases.filter(p => getPhaseStatus(p) === 'complete').length;
+            const incomplete = total - complete;
+            const rate = total > 0 ? ((complete / total) * 100).toFixed(1) : 0;
+
+            document.getElementById('statsRow').innerHTML = `
+                <div class="stat-card stat-total">
+                    <div class="stat-value">${total}</div>
+                    <div class="stat-label">场景阶段总数</div>
+                </div>
+                <div class="stat-card stat-complete">
+                    <div class="stat-value">${complete}</div>
+                    <div class="stat-label">流程完整</div>
+                </div>
+                <div class="stat-card stat-incomplete">
+                    <div class="stat-value">${incomplete}</div>
+                    <div class="stat-label">流程不完整</div>
+                </div>
+                <div class="stat-card stat-rate">
+                    <div class="stat-value">${rate}%</div>
+                    <div class="stat-label">完整率</div>
+                </div>
+            `;
+        }
+
+        function renderPhases() {
+            if (phases.length === 0) {
+                document.getElementById('analysisResult').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>未找到场景阶段数据</p>
+                    </div>
+                `;
+                return;
+            }
+
+            document.getElementById('analysisResult').innerHTML = phases.map((phase, index) => {
+                const status = getPhaseStatus(phase);
+                const statusClass = status === 'complete' ? 'status-complete' : 'status-incomplete';
+                const statusText = status === 'complete' ? '✅ 完整正常' : '⚠️ 不完整';
+
+                return `
+                    <div class="phase-card">
+                        <div class="phase-header" onclick="togglePhase(${index})">
+                            <div>
+                                <div class="phase-title">${phase.icon} 第${index + 1}阶段：${phase.name}（scene=${phase.scene}，ad_type=${phase.adType}）</div>
+                                <div class="phase-subtitle">${phase.startTime} | 共 ${phase.events.length} 个事件</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span class="phase-status ${statusClass}">${statusText}</span>
+                                <span class="toggle-icon" id="toggle-${index}">▼</span>
+                            </div>
+                        </div>
+                        <div class="phase-flow">${renderPhaseFlow(phase)}</div>
+                        <div class="phase-events" id="events-${index}">${renderPhaseEvents(phase)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPhaseFlow(phase) {
+            const flowSteps = ['40300', '100503', '40301', '40303', '40402', '40101'];
+            let html = '';
+            let added = 0;
+
+            flowSteps.forEach((code) => {
+                const found = phase.events.some(e => e.code === code);
+                const eventDef = EVENTS[code];
+                
+                if (found) {
+                    if (added > 0) html += '<span class="step-arrow">→</span>';
+                    html += `<span class="step-badge step-found">${code} ${eventDef.name}</span>`;
+                    added++;
+                }
+            });
+
+            return html;
+        }
+
+        function renderPhaseEvents(phase) {
+            return phase.events.map(event => {
+                const eventDef = EVENTS[event.code] || { name: '未知事件', desc: '' };
+                const codeClass = `code-${event.code}` || 'code-other';
+                
+                let details = [];
+                if (event.scene) details.push(`scene=${event.scene}`);
+                if (event.params.type3 && event.params.type4) details.push(`收益=${event.params.type3} ${event.params.type4}`);
+                if (event.params.net_quality) details.push(`网络质量=${event.params.net_quality}`);
+                if (event.params.leave_time) details.push(`冷却=${event.params.leave_time}秒`);
+                if (event.params.type) details.push(`type=${event.params.type}`);
+
+                return `
+                    <div class="event-item">
+                        <div class="event-time">${event.timestamp}</div>
+                        <span class="event-code ${codeClass}">${event.code}</span>
+                        <div class="event-desc">
+                            <div class="desc-main">${eventDef.name}：${eventDef.desc}</div>
+                            ${details.length > 0 ? `<div class="desc-detail">${details.join(' | ')}</div>` : ''}
+                        </div>
+                        <div class="event-raw" title="${event.raw}">${event.raw}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function togglePhase(index) {
+            const events = document.getElementById(`events-${index}`);
+            const toggle = document.getElementById(`toggle-${index}`);
+            events.classList.toggle('active');
+            toggle.classList.toggle('open');
+        }
+
+        function clearAll() {
+            document.getElementById('logInput').value = '';
+            document.getElementById('resultArea').style.display = 'none';
+            phases = [];
+        }
+    </script>
+</body>
+</html>

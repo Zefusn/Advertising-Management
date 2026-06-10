@@ -1,0 +1,3 @@
+@echo off
+echo 正在启动广告打点分析工具...
+start "" "%~dp0ad_analyzer.html"
