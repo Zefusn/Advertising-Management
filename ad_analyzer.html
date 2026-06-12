@@ -189,6 +189,84 @@
         .toggle-icon.open { transform: rotate(180deg); }
         .empty-state { text-align: center; padding: 80px 20px; color: #555; }
         .empty-state .icon { font-size: 50px; margin-bottom: 15px; }
+        
+        .page-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        .page-tab {
+            padding: 10px 20px;
+            background: #12121e;
+            border: 1px solid #1e1e3a;
+            border-radius: 8px;
+            color: #888;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .page-tab:hover { background: #1a1a2e; color: #fff; }
+        .page-tab.active { background: #00d2ff; color: #000; font-weight: bold; border-color: #00d2ff; }
+        .page-content { display: none; }
+        .page-content.active { display: block; }
+        
+        .scene-status-list {
+            background: #12121e;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #1e1e3a;
+        }
+        .scene-status-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00d2ff;
+            margin-bottom: 15px;
+        }
+        .scene-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 10px;
+        }
+        .scene-status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #0a0a14;
+            border-radius: 6px;
+            border: 1px solid #1e1e3a;
+        }
+        .scene-status-icon {
+            font-size: 20px;
+        }
+        .scene-status-info {
+            flex: 1;
+        }
+        .scene-status-name {
+            font-size: 14px;
+            color: #fff;
+        }
+        .scene-status-id {
+            font-size: 11px;
+            color: #666;
+        }
+        .scene-status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .scene-triggered {
+            background: rgba(46,213,115,0.15);
+            color: #2ed573;
+            border: 1px solid rgba(46,213,115,0.3);
+        }
+        .scene-not-triggered {
+            background: rgba(255,255,255,0.05);
+            color: #666;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
     </style>
 </head>
 <body>
@@ -202,8 +280,17 @@
             </div>
         </div>
         <div id="resultArea" style="display: none;">
-            <div class="stats-row" id="statsRow"></div>
-            <div class="analysis-result" id="analysisResult"></div>
+            <div class="page-tabs">
+                <button class="page-tab active" onclick="switchPage(1)">📋 流程分析</button>
+                <button class="page-tab" onclick="switchPage(2)">📊 场景状态</button>
+            </div>
+            <div id="page1" class="page-content active">
+                <div class="stats-row" id="statsRow"></div>
+                <div class="analysis-result" id="analysisResult"></div>
+            </div>
+            <div id="page2" class="page-content">
+                <div class="scene-status-list" id="sceneStatusList"></div>
+            </div>
         </div>
     </div>
 
@@ -350,6 +437,7 @@
             phases = analyzePhases(allEvents);
             document.getElementById('resultArea').style.display = 'block';
             renderStats();
+            renderSceneStatus(allEvents);
             renderPhases();
         }
 
@@ -449,6 +537,77 @@
                     <div class="stat-label">完整率</div>
                 </div>
             `;
+        }
+
+        function renderSceneStatus(allEvents) {
+            // 获取所有触发的场景
+            const triggeredScenes = new Set();
+            allEvents.forEach(event => {
+                if (event.scene) {
+                    triggeredScenes.add(event.scene);
+                }
+            });
+
+            // 按类别分组
+            const categories = {
+                'splash': { name: '开屏场景', scenes: [] },
+                'native': { name: '原生场景', scenes: [] },
+                'banner': { name: 'Banner场景', scenes: [] }
+            };
+
+            // 遍历所有场景定义
+            Object.entries(SCENES).forEach(([sceneId, sceneInfo]) => {
+                const category = sceneInfo.category || 'native';
+                if (categories[category]) {
+                    categories[category].scenes.push({
+                        id: sceneId,
+                        name: sceneInfo.name,
+                        icon: sceneInfo.icon,
+                        triggered: triggeredScenes.has(sceneId)
+                    });
+                }
+            });
+
+            // 渲染HTML
+            let html = '<div class="scene-status-title">📊 场景触发状态</div>';
+            
+            Object.entries(categories).forEach(([categoryKey, category]) => {
+                if (category.scenes.length === 0) return;
+                
+                const triggeredCount = category.scenes.filter(s => s.triggered).length;
+                const totalCount = category.scenes.length;
+                
+                html += `
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 14px; color: #888; margin-bottom: 10px;">
+                            ${category.name} (${triggeredCount}/${totalCount})
+                        </div>
+                        <div class="scene-status-grid">
+                `;
+                
+                category.scenes.forEach(scene => {
+                    const statusClass = scene.triggered ? 'scene-triggered' : 'scene-not-triggered';
+                    const statusText = scene.triggered ? '✓ 已触发' : '未触发';
+                    
+                    html += `
+                        <div class="scene-status-item">
+                            <div class="scene-status-icon">${scene.icon}</div>
+                            <div class="scene-status-info">
+                                <div class="scene-status-name">${scene.name}</div>
+                                <div class="scene-status-id">scene=${scene.id}</div>
+                            </div>
+                            <span class="scene-status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('sceneStatusList').innerHTML = html;
         }
 
         function renderPhases() {
@@ -562,6 +721,20 @@
             document.getElementById('logInput').value = '';
             document.getElementById('resultArea').style.display = 'none';
             phases = [];
+        }
+
+        function switchPage(pageNum) {
+            // 更新标签状态
+            document.querySelectorAll('.page-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`.page-tab:nth-child(${pageNum})`).classList.add('active');
+            
+            // 更新页面内容
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(`page${pageNum}`).classList.add('active');
         }
     </script>
 </body>
