@@ -109,11 +109,14 @@
         .phase-events.active { display: block; }
         .event-item {
             display: flex;
+            flex-wrap: wrap;
             gap: 15px;
             padding: 10px 0;
             border-bottom: 1px solid #1a1a2e;
             align-items: flex-start;
+            cursor: pointer;
         }
+        .event-item:hover { background: rgba(255,255,255,0.02); }
         .event-item:last-child { border-bottom: none; }
         .event-time {
             font-family: monospace;
@@ -150,13 +153,17 @@
             font-family: monospace;
             font-size: 10px;
             color: #555;
-            max-width: 450px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            width: 100%;
+            word-wrap: break-word;
+            white-space: pre-wrap;
             cursor: pointer;
+            padding: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+            display: none;
+            order: 999;
         }
-        .event-raw:hover { color: #888; }
+        .event-raw.show { display: block; }
 
         .stats-row {
             display: grid;
@@ -202,17 +209,67 @@
 
     <script>
         const SCENES = {
-            '101': { name: '开屏广告', adType: '5', icon: '🚀' },
-            '301': { name: '语言页面底部原生广告', adType: '2', icon: '📱' },
-            '302': { name: '新手引导原生广告', adType: '2', icon: '🎯' },
-            '303': { name: '设置页面原生广告', adType: '2', icon: '⚙️' }
+            // 开屏场景 (scene参数)
+            '101': { name: '应用商店Logo/下载详情页', adType: '5', icon: '🚀', category: 'splash' },
+            '102': { name: '后台拉起/下载完成页', adType: '5', icon: '🚀', category: 'splash' },
+            '103': { name: '通知栏消息/驻留通知栏', adType: '5', icon: '🚀', category: 'splash' },
+            '104': { name: '下载详情页拉起', adType: '5', icon: '🚀', category: 'splash' },
+            '105': { name: '下载小页面拉起', adType: '5', icon: '🚀', category: 'splash' },
+            '106': { name: 'FSI拉起', adType: '5', icon: '🚀', category: 'splash' },
+            
+            // 首页场景 (type参数)
+            '201': { name: '从下载列表点击_点start/自动拉起', adType: '2', icon: '🏠', category: 'native' },
+            '202': { name: '进入功能页', adType: '2', icon: '🏠', category: 'native' },
+            '203': { name: '从功能页返回', adType: '2', icon: '🏠', category: 'native' },
+            '204': { name: 'Friend Location Map_刷新位置', adType: '2', icon: '🏠', category: 'native' },
+            '205': { name: 'Share my location_点code按钮', adType: '2', icon: '🏠', category: 'native' },
+            '206': { name: 'Zone alert_选择好友地点_点save', adType: '2', icon: '🏠', category: 'native' },
+            '207': { name: 'Alert notify_用户有历史记录_点Create New Area', adType: '2', icon: '🏠', category: 'native' },
+            '208': { name: 'Phone number location_查询手机号位置', adType: '2', icon: '🏠', category: 'native' },
+            '209': { name: 'How to use_View friend\'s location_点done', adType: '2', icon: '🏠', category: 'native' },
+            '210': { name: 'How to use_Share my location_点done', adType: '2', icon: '🏠', category: 'native' },
+            
+            // 原生场景 (type参数)
+            '301': { name: '设置_底部', adType: '2', icon: '📱', category: 'native' },
+            '302': { name: '下载详情页', adType: '2', icon: '📱', category: 'native' },
+            '303': { name: '已下载设备列表_底部', adType: '2', icon: '📱', category: 'native' },
+            '304': { name: '位置权限_原生广告', adType: '2', icon: '📱', category: 'native' },
+            '305': { name: '驻留位置权限_原生广告', adType: '2', icon: '📱', category: 'native' },
+            '306': { name: '首页_好友定位地图_底部', adType: '2', icon: '📱', category: 'native' },
+            '307': { name: '需要权限_原生1', adType: '2', icon: '📱', category: 'native' },
+            '308': { name: '需要权限_原生2', adType: '2', icon: '📱', category: 'native' },
+            '309': { name: '需要权限_原生3', adType: '2', icon: '📱', category: 'native' },
+            '310': { name: '添加好友地点_底部', adType: '2', icon: '📱', category: 'native' },
+            '311': { name: 'My location code_底部', adType: '2', icon: '📱', category: 'native' },
+            '312': { name: 'Nearby_choose friends_Nearby', adType: '2', icon: '📱', category: 'native' },
+            '313': { name: 'Phone number location_显示结果', adType: '2', icon: '📱', category: 'native' },
+            '314': { name: 'How to use_底部', adType: '2', icon: '📱', category: 'native' },
+            '315': { name: 'How to use_View friend\'s location_底部', adType: '2', icon: '📱', category: 'native' },
+            '316': { name: 'How to use_Share my location_底部', adType: '2', icon: '📱', category: 'native' },
+            '317': { name: '退出APP_底部', adType: '2', icon: '📱', category: 'native' },
+            
+            // Banner场景 (type参数)
+            '401': { name: '首页_底部', adType: '1', icon: '📊', category: 'banner' },
+            '402': { name: 'Friend location map_底部', adType: '1', icon: '📊', category: 'banner' },
+            '403': { name: 'Share my location_底部', adType: '1', icon: '📊', category: 'banner' },
+            '404': { name: 'Zone alert_底部', adType: '1', icon: '📊', category: 'banner' },
+            '405': { name: 'Zone alert_Edit Area_底部', adType: '1', icon: '📊', category: 'banner' },
+            '406': { name: 'Alert history_底部', adType: '1', icon: '📊', category: 'banner' },
+            '407': { name: 'Alert history_详情页_底部', adType: '1', icon: '📊', category: 'banner' },
+            '408': { name: 'History_choose friends_底部', adType: '1', icon: '📊', category: 'banner' },
+            '409': { name: 'History_设备位置记录_底部', adType: '1', icon: '📊', category: 'banner' },
+            '410': { name: 'Nearby_choose friends_底部', adType: '1', icon: '📊', category: 'banner' },
+            '411': { name: 'Phone number location_结果', adType: '1', icon: '📊', category: 'banner' },
+            '412': { name: 'Phone number location_选择国家_底部', adType: '1', icon: '📊', category: 'banner' }
         };
 
         const EVENTS = {
             '900073': { name: '冷启动APP', desc: '点击桌面图标冷启动APP，触发开屏动画' },
             'loadSplashAd': { name: '预加载开屏', desc: '开始预加载开屏广告' },
             '40300': { name: '进入场景', desc: '进入广告场景页面' },
-            '100505': { name: '触发场景', desc: '触发场景广告逻辑' },
+            '100500': { name: '首页进入场景', desc: '首页进入广告场景' },
+            '100505': { name: '原生进入场景', desc: '原生广告进入场景' },
+            '100501': { name: 'Banner进入场景', desc: 'Banner广告进入场景' },
             '100503': { name: '调用展示', desc: '代码调用广告show展示方法' },
             '40301': { name: '广告展示', desc: '广告成功渲染显示在屏幕' },
             '40303': { name: '价值上报', desc: '上报本次广告预估收益，同步三方统计' },
@@ -224,7 +281,7 @@
             '40201': { name: '填充成功', desc: '广告素材加载成功，预估收益' }
         };
 
-        const CORE_EVENTS = ['40301', '40303'];
+        const CORE_EVENTS = ['100503', '40301', '40303'];
 
         let phases = [];
 
@@ -249,13 +306,16 @@
                     try { params = JSON.parse(data.params); } catch (e) {}
                 }
 
+                // 提取场景ID（从params.scene或params.type）
+                let scene = params.scene || params.type || '';
+
                 return {
                     timestamp,
                     code: eventId,
                     unitId: data.unit_id || '',
                     adType: data.ad_type || '',
                     adPlatform: data.ad_platform || '',
-                    scene: params.scene || '',
+                    scene: scene,
                     params,
                     raw: line.trim(),
                     data
@@ -295,44 +355,53 @@
 
         function analyzePhases(events) {
             const phases = [];
-            let currentPhase = null;
+            const activePhases = {}; // 用scene追踪活跃阶段
+
+            // 场景开始事件
+            const sceneStartEvents = ['40300', '100500', '100505', '100501'];
 
             for (let i = 0; i < events.length; i++) {
                 const event = events[i];
+                const scene = event.scene || 'unknown';
                 
-                // 检测场景开始：40300 有 scene 参数
-                if (event.code === '40300' && event.scene) {
-                    if (currentPhase) {
-                        phases.push(currentPhase);
+                // 检测场景开始：40300/100500/100505/100501 有 scene 或 type 参数
+                if (sceneStartEvents.includes(event.code) && event.scene) {
+                    // 如果该scene已有活跃阶段，合并事件
+                    if (activePhases[scene]) {
+                        activePhases[scene].events.push(event);
+                        // 更新ad_type（如果新的ad_type不为0）
+                        if (event.adType && event.adType !== '0') {
+                            activePhases[scene].adType = event.adType;
+                        }
+                    } else {
+                        // 创建新阶段
+                        const sceneInfo = SCENES[event.scene] || { name: `场景${event.scene}`, adType: event.adType || '2', icon: '📍' };
+                        
+                        activePhases[scene] = {
+                            scene: event.scene,
+                            name: sceneInfo.name,
+                            adType: event.adType || sceneInfo.adType,
+                            icon: sceneInfo.icon,
+                            events: [event],
+                            startTime: event.timestamp
+                        };
                     }
-                    
-                    const sceneInfo = SCENES[event.scene] || { name: `场景${event.scene}`, adType: event.adType || '2', icon: '📍' };
-                    
-                    currentPhase = {
-                        scene: event.scene,
-                        name: sceneInfo.name,
-                        adType: event.adType || sceneInfo.adType,
-                        icon: sceneInfo.icon,
-                        events: [event],
-                        startTime: event.timestamp
-                    };
                 } 
-                // 检测阶段结束：40402 关闭
-                else if (event.code === '40402' && currentPhase) {
-                    currentPhase.events.push(event);
-                    phases.push(currentPhase);
-                    currentPhase = null;
+                // 检测阶段结束：40402 关闭（匹配scene）
+                else if (event.code === '40402' && activePhases[scene]) {
+                    activePhases[scene].events.push(event);
+                    phases.push(activePhases[scene]);
+                    delete activePhases[scene];
                 }
-                // 其他事件添加到当前阶段
-                else if (currentPhase) {
-                    currentPhase.events.push(event);
+                // 其他事件：添加到对应scene的阶段
+                else if (activePhases[scene]) {
+                    activePhases[scene].events.push(event);
                 }
-                // 没有当前阶段时，40301/40303 需要根据 scene 或 ad_type 创建新阶段
+                // 没有活跃阶段时，40301/40303 需要创建新阶段
                 else if (['40301', '40303'].includes(event.code)) {
-                    const scene = event.scene || 'unknown';
                     const sceneInfo = SCENES[scene] || { name: `场景${scene}`, adType: event.adType || '2', icon: '📍' };
                     
-                    currentPhase = {
+                    activePhases[scene] = {
                         scene: scene,
                         name: sceneInfo.name,
                         adType: event.adType || sceneInfo.adType,
@@ -343,9 +412,10 @@
                 }
             }
             
-            if (currentPhase) {
-                phases.push(currentPhase);
-            }
+            // 保存所有未结束的阶段
+            Object.values(activePhases).forEach(phase => {
+                phases.push(phase);
+            });
 
             return phases;
         }
@@ -417,7 +487,9 @@
         }
 
         function renderPhaseFlow(phase) {
-            const flowSteps = ['40300', '100503', '40301', '40303', '40402', '40101'];
+            // 根据场景类型选择正确的进入场景事件
+            const sceneStartEvents = ['40300', '100500', '100505', '100501'];
+            const flowSteps = [...sceneStartEvents, '100503', '40301', '40303', '40402', '40101'];
             let html = '';
             let added = 0;
 
@@ -436,26 +508,37 @@
         }
 
         function renderPhaseEvents(phase) {
-            return phase.events.map(event => {
+            return phase.events.map((event, eventIndex) => {
                 const eventDef = EVENTS[event.code] || { name: '未知事件', desc: '' };
                 const codeClass = `code-${event.code}` || 'code-other';
                 
                 let details = [];
                 if (event.scene) details.push(`scene=${event.scene}`);
+                if (event.adType) details.push(`ad_type=${event.adType}`);
+                if (event.unitId) details.push(`unit_id=${event.unitId}`);
+                if (event.adPlatform) details.push(`ad_platform=${event.adPlatform}`);
                 if (event.params.type3 && event.params.type4) details.push(`收益=${event.params.type3} ${event.params.type4}`);
                 if (event.params.net_quality) details.push(`网络质量=${event.params.net_quality}`);
                 if (event.params.leave_time) details.push(`冷却=${event.params.leave_time}秒`);
                 if (event.params.type) details.push(`type=${event.params.type}`);
+                if (event.params.from) details.push(`from=${event.params.from}`);
+                if (event.params.n_id) details.push(`n_id=${event.params.n_id}`);
+                
+                // 显示所有params中的参数
+                const paramKeys = Object.keys(event.params).filter(k => !['scene', 'type', 'type3', 'type4', 'net_quality', 'leave_time', 'from', 'n_id'].includes(k));
+                paramKeys.forEach(key => {
+                    details.push(`${key}=${event.params[key]}`);
+                });
 
                 return `
-                    <div class="event-item">
+                    <div class="event-item" onclick="toggleRaw(this)">
                         <div class="event-time">${event.timestamp}</div>
                         <span class="event-code ${codeClass}">${event.code}</span>
                         <div class="event-desc">
                             <div class="desc-main">${eventDef.name}：${eventDef.desc}</div>
                             ${details.length > 0 ? `<div class="desc-detail">${details.join(' | ')}</div>` : ''}
                         </div>
-                        <div class="event-raw" title="${event.raw}">${event.raw}</div>
+                        <div class="event-raw">${event.raw}</div>
                     </div>
                 `;
             }).join('');
@@ -466,6 +549,13 @@
             const toggle = document.getElementById(`toggle-${index}`);
             events.classList.toggle('active');
             toggle.classList.toggle('open');
+        }
+
+        function toggleRaw(element) {
+            const raw = element.querySelector('.event-raw');
+            if (raw) {
+                raw.classList.toggle('show');
+            }
         }
 
         function clearAll() {
